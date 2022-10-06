@@ -367,9 +367,7 @@ class UserCourseEnrollmentsList(generics.ListAPIView):
 
         if api_version == API_V15:
             enrollment_data = {
-                'config': {
-                    'value_prop_enabled': VALUE_PROP_ENABLED.is_enabled()
-                },
+                'value_prop_enabled': VALUE_PROP_ENABLED.is_enabled(),
                 'enrollments': response.data
             }
             return Response(enrollment_data)
