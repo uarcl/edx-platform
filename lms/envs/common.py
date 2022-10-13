@@ -3228,6 +3228,8 @@ INSTALLED_APPS = [
 
     # Blockstore
     'blockstore.apps.bundles',
+    #UAR
+    'lms.djangoapps.certificate_uar',
 ]
 
 ######################### CSRF #########################################
