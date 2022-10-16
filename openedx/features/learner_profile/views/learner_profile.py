@@ -83,10 +83,11 @@ def learner_profile_context(request, profile_username, user_is_staff):
     account_settings_data = get_account_settings(request, [profile_username])[0]
 
     preferences_data = get_user_preferences(profile_user, profile_username)
-
+    registry_update_url = "https://auth.uar.cl/update?login_hint=%s"%(profile_user.email)
     context = {
         'own_profile': own_profile,
         'platform_name': configuration_helpers.get_value('platform_name', settings.PLATFORM_NAME),
+        'registry_update_url' : registry_update_url,
         'data': {
             'profile_user_id': profile_user.id,
             'default_public_account_fields': settings.ACCOUNT_VISIBILITY_CONFIGURATION['public_fields'],

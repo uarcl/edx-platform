@@ -36,6 +36,7 @@ from common.djangoapps.student.models import UserProfile
 from common.djangoapps.third_party_auth import pipeline
 from common.djangoapps.util.date_utils import strftime_localized
 
+from django.shortcuts import redirect
 log = logging.getLogger(__name__)
 
 
@@ -57,22 +58,8 @@ def account_settings(request):
         GET /account/settings
 
     """
-    if should_redirect_to_account_microfrontend():
-        url = settings.ACCOUNT_MICROFRONTEND_URL
-
-        duplicate_provider = pipeline.get_duplicate_provider(messages.get_messages(request))
-        if duplicate_provider:
-            url = '{url}?{params}'.format(
-                url=url,
-                params=urllib.parse.urlencode({
-                    'duplicate_provider': duplicate_provider,
-                }),
-            )
-
-        return redirect(url)
-
-    context = account_settings_context(request)
-    return render_to_response('student_account/account_settings.html', context)
+    user = request.user
+    return redirect('/u/' + user.username)
 
 
 def account_settings_context(request):
