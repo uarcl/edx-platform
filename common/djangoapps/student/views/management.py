@@ -517,161 +517,14 @@ def activate_account(request, key):
     When link in activation e-mail is clicked
     """
     # If request is in Studio call the appropriate view
-    if theming_helpers.get_project_root_name().lower() == 'cms':
-        monitoring_utils.set_custom_attribute('student_activate_account', 'cms')
-        return activate_account_studio(request, key)
-
-    # TODO: Use custom attribute to determine if there are any `activate_account` calls for cms in Production.
-    # If not, the templates wouldn't be needed for cms, but we still need a way to activate for cms tests.
-    monitoring_utils.set_custom_attribute('student_activate_account', 'lms')
-    activation_message_type = None
-
-    activated_or_confirmed = 'confirmed' if settings.MARKETING_EMAILS_OPT_IN else 'activated'
-    account_or_email = 'email' if settings.MARKETING_EMAILS_OPT_IN else 'account'
-
-    invalid_message = HTML(_(
-        '{html_start}Your {account_or_email} could not be {activated_or_confirmed}{html_end}'
-        'Something went wrong, please <a href="{support_url}">contact support</a> to resolve this issue.'
-    )).format(
-        account_or_email=account_or_email,
-        activated_or_confirmed=activated_or_confirmed,
-        support_url=configuration_helpers.get_value(
-            'ACTIVATION_EMAIL_SUPPORT_LINK', settings.ACTIVATION_EMAIL_SUPPORT_LINK
-        ) or settings.SUPPORT_SITE_LINK,
-        html_start=HTML('<p class="message-title">'),
-        html_end=HTML('</p>'),
-    )
-
-    show_account_activation_popup = None
-    try:
-        registration = Registration.objects.get(activation_key=key)
-    except (Registration.DoesNotExist, Registration.MultipleObjectsReturned):
-        activation_message_type = 'error'
-        messages.error(
-            request,
-            invalid_message,
-            extra_tags='account-activation aa-icon'
-        )
-    else:
-        if request.user.is_authenticated and request.user.id != registration.user.id:
-            activation_message_type = 'error'
-            messages.error(
-                request,
-                invalid_message,
-                extra_tags='account-activation aa-icon'
-            )
-        elif registration.user.is_active:
-            activation_message_type = 'info'
-            messages.info(
-                request,
-                HTML(_(
-                    '{html_start}This {account_or_email} has already been {activated_or_confirmed}.{html_end}'
-                )).format(
-                    account_or_email=account_or_email,
-                    activated_or_confirmed=activated_or_confirmed,
-                    html_start=HTML('<p class="message-title">'),
-                    html_end=HTML('</p>'),
-                ),
-                extra_tags='account-activation aa-icon',
-            )
-        else:
-            registration.activate()
-            # Success message for logged in users.
-            message = _('{html_start}Success{html_end} You have {activated_or_confirmed} your {account_or_email}.')
-
-            tracker.emit(
-                USER_ACCOUNT_ACTIVATED,
-                {
-                    "user_id": registration.user.id,
-                    "activation_timestamp": registration.activation_timestamp
-                }
-            )
-
-            if not request.user.is_authenticated:
-                # Success message for logged out users
-                message = _(
-                    '{html_start}Success! You have {activated_or_confirmed} your {account_or_email}.{html_end}'
-                    'You will now receive email updates and alerts from us related to'
-                    ' the courses you are enrolled in. Sign In to continue.'
-                )
-
-            # Add message for later use.
-            activation_message_type = 'success'
-            messages.success(
-                request,
-                HTML(message).format(
-                    account_or_email=account_or_email,
-                    activated_or_confirmed=activated_or_confirmed,
-                    html_start=HTML('<p class="message-title">'),
-                    html_end=HTML('</p>'),
-                ),
-                extra_tags='account-activation aa-icon',
-            )
-            show_account_activation_popup = request.COOKIES.get(settings.SHOW_ACTIVATE_CTA_POPUP_COOKIE_NAME, None)
-
-    # If a safe `next` parameter is provided in the request
-    # and it's not the same as the dashboard, redirect there.
-    # The `get_next_url_for_login_page()` function will only return a safe redirect URL.
-    # If the provided `next` URL is not safe, that function will fill `redirect_to`
-    # with a value of `reverse('dashboard')`.
-    redirect_url = None
-    if request.GET.get('next'):
-        redirect_to, root_login_url = get_next_url_for_login_page(request, include_host=True)
-
-        # Don't automatically redirect authenticated users to the redirect_url
-        # if the `next` value is either:
-        # 1. "/dashboard" or
-        # 2. "https://{LMS_ROOT_URL}/dashboard" (which we might provide as a value from the AuthN MFE)
-        if redirect_to not in (
-            root_login_url + reverse('dashboard'),
-            reverse('dashboard')
-        ):
-            redirect_url = get_redirect_url_with_host(root_login_url, redirect_to)
-
-    if should_redirect_to_authn_microfrontend() and not request.user.is_authenticated:
-        params = {'account_activation_status': activation_message_type}
-        if redirect_url:
-            params['next'] = redirect_url
-        url_path = '/login?{}'.format(urllib.parse.urlencode(params))
-        return redirect(settings.AUTHN_MICROFRONTEND_URL + url_path)
-
-    response = redirect(redirect_url) if redirect_url and is_enterprise_learner(request.user) else redirect('dashboard')
-    if show_account_activation_popup:
-        response.delete_cookie(
-            settings.SHOW_ACTIVATE_CTA_POPUP_COOKIE_NAME,
-            domain=settings.SESSION_COOKIE_DOMAIN,
-            path='/',
-        )
-    return response
-
+    return redirect('/auth/login/uarcl-oauth/')
 
 @ensure_csrf_cookie
 def activate_account_studio(request, key):
     """
     When link in activation e-mail is clicked and the link belongs to studio.
     """
-    try:
-        registration = Registration.objects.get(activation_key=key)
-    except (Registration.DoesNotExist, Registration.MultipleObjectsReturned):
-        return render_to_response(
-            "registration/activation_invalid.html",
-            {'csrf': csrf(request)['csrf_token']}
-        )
-    else:
-        user_logged_in = request.user.is_authenticated
-        already_active = True
-        if not registration.user.is_active:
-            registration.activate()
-            already_active = False
-
-        return render_to_response(
-            "registration/activation_complete.html",
-            {
-                'user_logged_in': user_logged_in,
-                'already_active': already_active
-            }
-        )
-
+    return redirect('/auth/login/uarcl-oauth/')
 
 def validate_new_email(user, new_email):
     """
@@ -798,26 +651,7 @@ def activate_secondary_email(request, key):
     This is called when the activation link is clicked. We activate the secondary email
     for the requested user.
     """
-    try:
-        pending_secondary_email_change = PendingSecondaryEmailChange.objects.get(activation_key=key)
-    except PendingSecondaryEmailChange.DoesNotExist:
-        return render_to_response("invalid_email_key.html", {})
-
-    try:
-        account_recovery = pending_secondary_email_change.user.account_recovery
-    except AccountRecovery.DoesNotExist:
-        account_recovery = AccountRecovery(user=pending_secondary_email_change.user)
-
-    try:
-        account_recovery.update_recovery_email(pending_secondary_email_change.new_secondary_email)
-    except ValidationError:
-        return render_to_response("secondary_email_change_failed.html", {
-            'secondary_email': pending_secondary_email_change.new_secondary_email
-        })
-
-    pending_secondary_email_change.delete()
-
-    return render_to_response("secondary_email_change_successful.html")
+    return redirect('/auth/login/uarcl-oauth/')
 
 
 @ensure_csrf_cookie
@@ -826,81 +660,7 @@ def confirm_email_change(request, key):
     User requested a new e-mail. This is called when the activation
     link is clicked. We confirm with the old e-mail, and update
     """
-    with transaction.atomic():
-        try:
-            pec = PendingEmailChange.objects.get(activation_key=key)
-        except PendingEmailChange.DoesNotExist:
-            response = render_to_response("invalid_email_key.html", {})
-            transaction.set_rollback(True)
-            return response
-
-        user = pec.user
-        address_context = {
-            'old_email': user.email,
-            'new_email': pec.new_email
-        }
-
-        if len(User.objects.filter(email=pec.new_email)) != 0:
-            response = render_to_response("email_exists.html", {})
-            transaction.set_rollback(True)
-            return response
-
-        use_https = request.is_secure()
-        if settings.FEATURES['ENABLE_MKTG_SITE']:
-            contact_link = marketing_link('CONTACT')
-        else:
-            contact_link = '{protocol}://{site}{link}'.format(
-                protocol='https' if use_https else 'http',
-                site=configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME),
-                link=reverse('contact'),
-            )
-
-        site = Site.objects.get_current()
-        message_context = get_base_template_context(site)
-        message_context.update({
-            'old_email': user.email,
-            'new_email': pec.new_email,
-            'contact_link': contact_link,
-            'from_address': configuration_helpers.get_value('email_from_address', settings.DEFAULT_FROM_EMAIL),
-        })
-
-        msg = EmailChangeConfirmation().personalize(
-            recipient=Recipient(user.id, user.email),
-            language=preferences_api.get_user_preference(user, LANGUAGE_KEY),
-            user_context=message_context,
-        )
-
-        u_prof = UserProfile.objects.get(user=user)
-        meta = u_prof.get_meta()
-        if 'old_emails' not in meta:
-            meta['old_emails'] = []
-        meta['old_emails'].append([user.email, datetime.datetime.now(UTC).isoformat()])
-        u_prof.set_meta(meta)
-        u_prof.save()
-        # Send it to the old email...
-        try:
-            ace.send(msg)
-        except Exception:  # pylint: disable=broad-except
-            log.warning('Unable to send confirmation email to old address', exc_info=True)
-            response = render_to_response("email_change_failed.html", {'email': user.email})
-            transaction.set_rollback(True)
-            return response
-
-        user.email = pec.new_email
-        user.save()
-        pec.delete()
-        # And send it to the new email...
-        msg.recipient = Recipient(user.id, pec.new_email)
-        try:
-            ace.send(msg)
-        except Exception:  # pylint: disable=broad-except
-            log.warning('Unable to send confirmation email to new address', exc_info=True)
-            response = render_to_response("email_change_failed.html", {'email': pec.new_email})
-            transaction.set_rollback(True)
-            return response
-
-        response = render_to_response("email_change_successful.html", address_context)
-        return response
+    return redirect('/auth/login/uarcl-oauth/')
 
 
 @api_view(['POST'])
