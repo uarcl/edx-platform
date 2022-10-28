@@ -1,5 +1,4 @@
 # -*- coding:utf-8 -*-
-import logging
 from django.db import models
 from .models import CertificateUar
 from lms.djangoapps.certificates.models import (
@@ -7,13 +6,9 @@ from lms.djangoapps.certificates.models import (
     CertificateStatuses
 )
 from openedx.core.djangoapps.content.course_overviews.api import get_course_overview_or_none
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
-from util.json_request import JsonResponse
-from django.http.response import HttpResponseBadRequest
-
-log = logging.getLogger(__name__)
+from django.views.decorators.csrf import csrf_exempt
+from common.djangoapps.util.json_request import JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 
 @csrf_exempt
 def get_uar_certificate_data(request, certificate_uuid):

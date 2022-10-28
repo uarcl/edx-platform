@@ -99,6 +99,7 @@ notification_prefs_urls = [
 urlpatterns = [
     #UAR_API
     path('uar/api/v1/certificate/', include('lms.djangoapps.certificate_uar.urls')),
+
     path('', branding_views.index, name='root'),  # Main marketing page, or redirect to courseware
 
     path('', include('common.djangoapps.student.urls')),
