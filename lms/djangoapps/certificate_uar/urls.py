@@ -2,7 +2,7 @@
 
 from django.conf import settings
 from django.urls import path, re_path
-import api
+from . import api
 
 urlpatterns = [
     re_path(
