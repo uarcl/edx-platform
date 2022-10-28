@@ -16,11 +16,11 @@ from django.http.response import HttpResponseBadRequest
 log = logging.getLogger(__name__)
 
 @csrf_exempt
-def get_uar_certificate_data(request):
+def get_uar_certificate_data(request, certificate_uuid):
     if request.method == 'GET':
         try:
             certificate = GeneratedCertificate.eligible_certificates.get(
-                verify_uuid=request.uuid,
+                verify_uuid=certificate_uuid,
                 status=CertificateStatuses.downloadable
             )
             try:

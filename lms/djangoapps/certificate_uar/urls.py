@@ -1,9 +1,13 @@
 # -*- coding:utf-8 -*-
-from django.conf import settings
-from django.conf.urls import include, url
 
+from django.conf import settings
+from django.urls import path, re_path
 import api
 
 urlpatterns = [
-    url(r'^v1/certificate/', api.get_uar_certificate_data, name='certificate_student_data'),
+    re_path(
+        r'^(?P<certificate_uuid>[0-9a-f]{32})$',
+        api.get_uar_certificate_data,
+        name='certificate_student_data'
+    ),
 ]
