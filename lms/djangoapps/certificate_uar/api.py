@@ -22,7 +22,7 @@ def get_uar_certificate_data(request, certificate_uuid):
                 course_overview = get_course_overview_or_none(certificate.course_id)
                 if not course_overview:
                     return JsonResponse(status=404)
-                certificate_format = CertificateUar(course_id=certificate.course_id)
+                certificate_format = CertificateUar.objects.get(course_id=certificate.course_id)
                 return JsonResponse({'cert_uid':certificate.verify_uuid,
                                      'cert_status':certificate.status,
                                      'cert_mode':certificate.mode,
