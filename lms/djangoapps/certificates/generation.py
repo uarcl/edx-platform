@@ -14,6 +14,11 @@ from lms.djangoapps.certificates.data import CertificateStatuses
 from lms.djangoapps.certificates.models import GeneratedCertificate
 from lms.djangoapps.certificates.utils import emit_certificate_event, get_preferred_certificate_name
 
+import social_django
+import requests
+import time
+import uar_registry.uarcl
+
 log = logging.getLogger(__name__)
 
 
@@ -33,7 +38,7 @@ def generate_course_certificate(user, course_key, status, enrollment_mode, cours
         course_grade: user's course grade
         generation_mode: used when emitting an event. Options are "self" (implying the user generated the cert
             themself) and "batch" for everything else.
-    """
+    """ 
     cert = _generate_certificate(user=user, course_key=course_key, status=status, enrollment_mode=enrollment_mode,
                                  course_grade=course_grade)
 
@@ -74,6 +79,24 @@ def _generate_certificate(user, course_key, status, enrollment_mode, course_grad
     else:
         uuid = uuid4().hex
 
+    document_number = False
+    fullname = False
+    try:
+        social_user = list(social_django.models.DjangoStorage.user.get_social_auth_for_user(user=user,provider='uarcl-oauth'))
+        if len(social_user) == 1:
+            if 'doc_number' in social_user[0].extra_data:
+                document_number =  str(social_user[0].extra_data['doc_number'])
+            if 'fullname' in social_user[0].extra_data:
+                fullname = str(social_user[0].extra_data['fullname'])
+            if 'access_token' in social_user[0].extra_data and 'expires' in social_user[0].extra_data and 'auth_time' in social_user[0].extra_data and (int(social_user[0].extra_data['auth_time']) + int(social_user[0].extra_data['expires'])) > int(time.time()):
+                req = requests.get(uar_registry.uarcl.UARCLOAuth2.USERINFO_URL,headers={'Authorization': 'Bearer {0}'.format(social_user[0].extra_data['access_token'])})
+                req_json = req.json()
+                document_number = req_json.get('doc_number')
+                fullname = req_json.get('fullname')
+    except Exception:
+        pass
+    document_number = '' if not document_number else document_number
+    preferred_name = preferred_name if not fullname else preferred_name
     cert, created = GeneratedCertificate.objects.update_or_create(
         user=user,
         course_id=course_key,
@@ -87,7 +110,8 @@ def _generate_certificate(user, course_key, status, enrollment_mode, course_grad
             'download_url': '',
             'key': '',
             'verify_uuid': uuid,
-            'error_reason': ''
+            'error_reason': '',
+            'document_number': document_number,
         }
     )
 
