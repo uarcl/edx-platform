@@ -1,6 +1,5 @@
 """ Tests for tab functions (just primitive). """
 
-
 import json
 import random
 
@@ -27,12 +26,15 @@ class TabsPageTests(CourseTestCase):
         # Set the URL for tests
         self.url = reverse_course_url('tabs_handler', self.course.id)
 
-        # add a static tab to the course, for code coverage
-        self.test_tab = ItemFactory.create(
-            parent_location=self.course.location,
-            category="static_tab",
-            display_name="Static_1"
-        )
+        # add 4 static tabs to the course, for code coverage
+        self.test_tabs = []
+        for i in range(1, 5):
+            tab = ItemFactory.create(
+                parent_location=self.course.location,
+                category="static_tab",
+                display_name=f"Static_{i}"
+            )
+        self.test_tabs.append(tab)
         self.reload_course()
 
     def check_invalid_tab_id_response(self, resp):
@@ -93,7 +95,7 @@ class TabsPageTests(CourseTestCase):
         # Remove one tab randomly. This shouldn't delete the tab.
         tabs_data.pop()
 
-        # post the request
+        # post the request with the reordered static tabs only
         resp = self.client.ajax_post(
             self.url,
             data={
@@ -165,7 +167,7 @@ class TabsPageTests(CourseTestCase):
         """
         Verify that the static tab renders itself with the correct HTML
         """
-        preview_url = f'/xblock/{self.test_tab.location}/{STUDENT_VIEW}'
+        preview_url = f'/xblock/{self.test_tabs[0].location}/{STUDENT_VIEW}'
 
         resp = self.client.get(preview_url, HTTP_ACCEPT='application/json')
         assert resp.status_code == 200
