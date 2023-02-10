@@ -17,7 +17,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 import lms.djangoapps.branding.api as branding_api
 import lms.djangoapps.courseware.views.views as courseware_views
-from common.djangoapps.edxmako.shortcuts import marketing_link, render_to_response
+from common.djangoapps.edxmako.shortcuts import marketing_link, render_to_response,get_uar_custom_urls
 from common.djangoapps.student import views as student_views
 from common.djangoapps.util.cache import cache_if_anonymous
 from common.djangoapps.util.json_request import JsonResponse
@@ -87,6 +87,11 @@ def courses(request):
     to that. Otherwise, if subdomain branding is on, this is the university
     profile page. Otherwise, it's the edX courseware.views.views.courses page
     """
+    uar_custom_course_url = get_uar_custom_urls('COURSES')
+    if uar_custom_course_url:
+        return redirect(uar_custom_course_url)
+
+
     enable_mktg_site = configuration_helpers.get_value(
         'ENABLE_MKTG_SITE',
         settings.FEATURES.get('ENABLE_MKTG_SITE', False)

@@ -31,6 +31,19 @@ from . import Engines
 
 log = logging.getLogger(__name__)
 
+def get_uar_custom_urls(name):
+    enable_uar_custom_urls = configuration_helpers.get_value(
+        'ENABLE_UAR_CUSTOM_URLS',
+        settings.FEATURES.get('ENABLE_UAR_CUSTOM_URLS', False)
+    )
+    if not enable_uar_custom_urls:
+        return False
+        
+    custom_urls = configuration_helpers.get_value(
+        'UAR_CUSTOM_URLS',
+        settings.UAR_CUSTOM_URLS
+    )
+    return custom_urls.get(name,False)
 
 def marketing_link(name):
     """Returns the correct URL for a link to the marketing site
