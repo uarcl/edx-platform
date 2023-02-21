@@ -233,6 +233,9 @@ def login_and_registration_form(request, initial_mode="login"):
             'message': message.message, 'tags': message.tags
         } for message in messages.get_messages(request) if 'account-recovery' in message.tags
     ]
+    auto_redirect = third_party_auth_context(request, redirect_to, third_party_auth_hint)
+    if len(auto_redirect['providers']) == 1 and 'loginUrl' in auto_redirect['providers'][0]:
+        return redirect(auto_redirect['providers'][0]['loginUrl'])
 
     # Otherwise, render the combined login/registration page
     context = {
@@ -280,7 +283,6 @@ def login_and_registration_form(request, initial_mode="login"):
 
     response = render_to_response('student_account/login_and_register.html', context)
     handle_enterprise_cookies_for_logistration(request, response, context)
-
     return response
 
 
