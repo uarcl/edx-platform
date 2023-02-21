@@ -29,7 +29,11 @@ urlpatterns = [
         views.render_cert_by_uuid,
         name='render_cert_by_uuid'
     ),
-
+        re_path(
+        r'^(?P<certificate_uuid>([0-9a-z]{1,31}|[0-9a-z]{33,}))$',
+        views.render_not_found_cert,
+        name='render_not_found_cert'
+    ),
     # End-points used by student support
     # The views in the lms/djangoapps/support use these end-points
     # to retrieve certificate information and regenerate certificates.

@@ -48,6 +48,7 @@ from common.djangoapps.student.forms import send_account_recovery_email_for_user
 from common.djangoapps.student.models import AccountRecovery, LoginFailures
 from common.djangoapps.util.json_request import JsonResponse
 from common.djangoapps.util.password_policy_validators import normalize_password, validate_password
+from django.shortcuts import redirect
 
 POST_EMAIL_KEY = 'openedx.core.djangoapps.util.ratelimit.request_post_email'
 REAL_IP_KEY = 'openedx.core.djangoapps.util.ratelimit.real_ip'
@@ -122,21 +123,7 @@ def send_password_reset_success_email(user, request):
         user (User): Django User object
         request (HttpRequest): Django request object
     """
-    message_context, user_language_preference = get_user_default_email_params(user)
-    lms_root_url = configuration_helpers.get_value('LMS_ROOT_URL', settings.LMS_ROOT_URL)
-    message_context.update(
-        {'login_link': f'{lms_root_url}/login', 'request': request, }
-    )
-
-    msg = PasswordResetSuccess(context=message_context).personalize(
-        recipient=Recipient(user.id, user.email),
-        language=user_language_preference,
-        user_context={"name": user.profile.name},
-    )
-    try:
-        ace.send(msg)
-    except Exception:  # pylint: disable=broad-except
-        log.exception('PasswordResetSuccess: sending email to user [%s] failed.', user.username)
+    log.info(def send_password_reset_success_email(user, request):")
 
 
 def send_password_reset_email_for_user(user, request, preferred_email=None):
@@ -148,29 +135,7 @@ def send_password_reset_email_for_user(user, request, preferred_email=None):
         request (HttpRequest): Django request object
         preferred_email (str): Send email to this address if present, otherwise fallback to user's email address.
     """
-    message_context, user_language_preference = get_user_default_email_params(user)
-    site_name = settings.AUTHN_MICROFRONTEND_DOMAIN if should_redirect_to_authn_microfrontend() \
-        else configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME)
-    message_context.update({
-        'request': request,  # Used by google_analytics_tracking_pixel
-        # TODO: This overrides `platform_name` from `get_base_template_context` to make the tests passes
-        'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
-        'reset_link': '{protocol}://{site}{link}?track=pwreset'.format(
-            protocol='https' if request.is_secure() else 'http',
-            site=site_name,
-            link=reverse('password_reset_confirm', kwargs={
-                'uidb36': int_to_base36(user.id),
-                'token': default_token_generator.make_token(user),
-            }),
-        )
-    })
-
-    msg = PasswordReset().personalize(
-        recipient=Recipient(user.id, preferred_email or user.email),
-        language=user_language_preference,
-        user_context=message_context,
-    )
-    ace.send(msg)
+    log.info("def send_password_reset_email_for_user(user, request, preferred_email=None):")
 
 
 class PasswordResetFormNoActive(PasswordResetForm):
@@ -221,11 +186,7 @@ class PasswordResetFormNoActive(PasswordResetForm):
         Generates a one-use only link for resetting password and sends to the
         user.
         """
-        for user in self.users_cache:
-            if self.is_account_recovery:
-                send_password_reset_email_for_user(user, request)
-            else:
-                send_account_recovery_email_for_user(user, request, user.account_recovery.secondary_email)
+        log.info(" def save(self,  # pylint: disable=arguments-differ")
 
 
 class PasswordResetView(APIView):
@@ -237,7 +198,8 @@ class PasswordResetView(APIView):
 
     @method_decorator(ensure_csrf_cookie)
     def get(self, request):
-        return HttpResponse(get_password_reset_form().to_json(), content_type="application/json")  # lint-amnesty, pylint: disable=http-response-with-content-type-json
+        return redirect('/auth/login/uarcl-oauth/')
+    
 
 
 @helpers.intercept_errors(errors.UserAPIInternalError, ignore_errors=[errors.UserAPIRequestError])
@@ -473,48 +435,8 @@ class PasswordResetConfirmWrapper(PasswordResetConfirmView):
         )
 
     def post(self, request, *args, **kwargs):
-        # We have to make a copy of request.POST because it is a QueryDict object which is immutable until copied.
-        # We have to use request.POST because the password_reset_confirm method takes in the request and a user's
-        # password is set to the request.POST['new_password1'] field. We have to also normalize the new_password2
-        # field so it passes the equivalence check that new_password1 == new_password2
-        # In order to switch out of having to do this copy, we would want to move the normalize_password code into
-        # a custom User model's set_password method to ensure it is always happening upon calling set_password.
-        request.POST = request.POST.copy()
-        request.POST['new_password1'] = normalize_password(request.POST['new_password1'])
-        request.POST['new_password2'] = normalize_password(request.POST['new_password2'])
-        is_account_recovery = 'is_account_recovery' in request.GET
-
-        password = request.POST['new_password1']
-        response = self._validate_password(password, request)
-        if response:
-            return response
-
-        response = self._process_password_reset_success(request, self.token, self.uidb64,
-                                                        extra_context=self.platform_name)
-
-        # If password reset was unsuccessful a template response is returned (status_code 200).
-        # Check if form is invalid then show an error to the user.
-        # Note if password reset was successful we get response redirect (status_code 302).
-        password_reset_successful = response.status_code == 302
-        if not password_reset_successful:
-            return self._handle_password_reset_failure(response)
-
-        updated_user = User.objects.get(id=self.uid_int)
-        if is_account_recovery:
-            self._handle_primary_email_update(updated_user)
-
-        updated_user.save()
-        if password_reset_successful and is_account_recovery:
-            self._handle_password_creation(request, updated_user)
-
-        # Handles clearing the failed login counter upon password reset.
-        if LoginFailures.is_feature_enabled():
-            LoginFailures.clear_lockout_counter(updated_user)
-
-        update_session_auth_hash(request, updated_user)
-        send_password_reset_success_email(updated_user, request)
-        return response
-
+        return redirect('/auth/login/uarcl-oauth/')
+        
     def dispatch(self, *args, **kwargs):
         self.uidb36 = kwargs.get('uidb36')
         self.token = kwargs.get('token')
@@ -600,57 +522,7 @@ def password_change_request_handler(request):
         POST /account/password
 
     """
-    user = request.user
-    request_from_support_tools = (user.is_staff or user.is_superuser) and request.POST.get('email_from_support_tools')
-    if request_from_support_tools:
-        email = request.POST.get('email_from_support_tools')
-    else:
-        # Prefer logged-in user's email
-        email = user.email if user.is_authenticated else request.POST.get('email')
-    AUDIT_LOG.info("Password reset initiated for email %s.", email)
-
-    if getattr(request, 'limited', False) and not request_from_support_tools:
-        AUDIT_LOG.warning("Password reset rate limit exceeded for email %s.", email)
-        return HttpResponse(
-            _("Your previous request is in progress, please try again in a few moments."),
-            status=403
-        )
-
-    if email:
-        try:
-            request_password_change(email, request.is_secure())
-            user = user if not request.POST.get('email_from_support_tools') and user.is_authenticated \
-                else _get_user_from_email(email=email)
-            destroy_oauth_tokens(user)
-        except errors.UserNotFound:
-            AUDIT_LOG.info("Invalid password reset attempt")
-            # If enabled, send an email saying that a password reset was attempted, but that there is
-            # no user associated with the email
-            if configuration_helpers.get_value('ENABLE_PASSWORD_RESET_FAILURE_EMAIL',
-                                               settings.FEATURES['ENABLE_PASSWORD_RESET_FAILURE_EMAIL']):
-                site = get_current_site()
-                message_context = get_base_template_context(site)
-
-                message_context.update({
-                    'failed': True,
-                    'request': request,  # Used by google_analytics_tracking_pixel
-                    'email_address': email,
-                })
-
-                msg = PasswordReset().personalize(
-                    recipient=Recipient(lms_user_id=0, email_address=email),
-                    language=settings.LANGUAGE_CODE,
-                    user_context=message_context,
-                )
-                ace.send(msg)
-        except errors.UserAPIInternalError as err:
-            log.exception('Error occurred during password change for user {email}: {error}'
-                          .format(email=email, error=err))
-            return HttpResponse(_("Some error occurred during password change. Please try again"), status=500)
-
-        return HttpResponse(status=200)
-    else:
-        return HttpResponseBadRequest(_("No email address provided."))
+    return redirect('/auth/login/uarcl-oauth/')
 
 
 def _get_rate(rate):
@@ -725,81 +597,7 @@ class LogistrationPasswordResetView(APIView):  # lint-amnesty, pylint: disable=m
 
     def post(self, request, **kwargs):
         """ Reset learner password using passed token and new credentials """
-
-        reset_status = False
-        uidb36 = kwargs.get('uidb36')
-        token = kwargs.get('token')
-
-        has_required_values, uid_int = self._check_token_has_required_values(uidb36, token)
-        if not has_required_values:
-            AUDIT_LOG.exception("Invalid password reset confirm token")
-            return Response({'reset_status': reset_status})
-
-        request.data._mutable = True  # lint-amnesty, pylint: disable=protected-access
-        request.data['new_password1'] = normalize_password(request.data['new_password1'])
-        request.data['new_password2'] = normalize_password(request.data['new_password2'])
-
-        password = request.data['new_password1']
-        try:
-            user = User.objects.get(id=uid_int)
-            if not default_token_generator.check_token(user, token):
-                AUDIT_LOG.exception("Token validation failed")
-                return Response({'reset_status': reset_status})
-
-            validate_password(password, user=user)
-
-            if settings.ENABLE_AUTHN_RESET_PASSWORD_HIBP_POLICY:
-                # Checks the Pwned Databases for password vulnerability.
-                pwned_response = check_pwned_password(password)
-                if pwned_response.get('vulnerability', 'no') == 'yes':
-                    error_status = {
-                        'reset_status': reset_status,
-                        'err_msg': accounts.AUTHN_PASSWORD_COMPROMISED_MSG
-                    }
-                    return Response(error_status)
-
-            form = SetPasswordForm(user, request.data)
-            if form.is_valid():
-                form.save()
-                reset_status = True
-
-                if 'is_account_recovery' in request.GET:
-                    try:
-                        old_primary_email = user.email
-                        user.email = user.account_recovery.secondary_email
-                        user.account_recovery.delete()
-                        # emit an event that the user changed their secondary email to the primary email
-                        tracker.emit(
-                            SETTING_CHANGE_INITIATED,
-                            {
-                                "setting": "email",
-                                "old": old_primary_email,
-                                "new": user.email,
-                                "user_id": user.id,
-                            }
-                        )
-                        user.save()
-                    except ObjectDoesNotExist:
-                        err = 'Account recovery process initiated without AccountRecovery instance for user {username}'
-                        log.error(err.format(username=user.username))
-
-                # Handles clearing the failed login counter upon password reset.
-                if LoginFailures.is_feature_enabled():
-                    LoginFailures.clear_lockout_counter(user)
-
-                send_password_reset_success_email(user, request)
-                update_session_auth_hash(request, user)
-        except ValidationError as err:
-            AUDIT_LOG.exception("Password validation failed")
-            error_status = {
-                'reset_status': reset_status,
-                'err_msg': ' '.join(err.messages)
-            }
-            return Response(error_status)
-        except Exception:   # pylint: disable=broad-except
-            AUDIT_LOG.exception("Setting new password failed")
-
-        return Response({'reset_status': reset_status})
+        return redirect('/auth/login/uarcl-oauth/')
 
     def _check_token_has_required_values(self, uidb36, token):
         """

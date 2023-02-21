@@ -103,29 +103,31 @@ class Command(BaseCommand):
         :param user:
         :param site:
         """
-        message_context = get_base_template_context(site)
-        email = user.email
-        if should_redirect_to_authn_microfrontend():
-            site_url = settings.AUTHN_MICROFRONTEND_URL
-        else:
-            site_url = configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME)
-        message_context.update({
-            'email': email,
-            'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
-            'reset_link': '{protocol}://{site_url}{link}?track=pwreset'.format(
-                protocol='http',
-                site_url=site_url,
-                link=reverse('password_reset_confirm', kwargs={
-                    'uidb36': int_to_base36(user.id),
-                    'token': default_token_generator.make_token(user),
-                }),
-            )
-        })
+        logger.info("def send_password_reset_email(self, user, site):")
 
-        with emulate_http_request(site, user):
-            msg = PasswordReset().personalize(
-                recipient=Recipient(user.id, email),
-                language=get_user_preference(user, LANGUAGE_KEY),
-                user_context=message_context,
-            )
-            ace.send(msg)
+        # message_context = get_base_template_context(site)
+        # email = user.email
+        # if should_redirect_to_authn_microfrontend():
+        #     site_url = settings.AUTHN_MICROFRONTEND_URL
+        # else:
+        #     site_url = configuration_helpers.get_value('SITE_NAME', settings.SITE_NAME)
+        # message_context.update({
+        #     'email': email,
+        #     'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
+        #     'reset_link': '{protocol}://{site_url}{link}?track=pwreset'.format(
+        #         protocol='http',
+        #         site_url=site_url,
+        #         link=reverse('password_reset_confirm', kwargs={
+        #             'uidb36': int_to_base36(user.id),
+        #             'token': default_token_generator.make_token(user),
+        #         }),
+        #     )
+        # })
+
+        # with emulate_http_request(site, user):
+        #     msg = PasswordReset().personalize(
+        #         recipient=Recipient(user.id, email),
+        #         language=get_user_preference(user, LANGUAGE_KEY),
+        #         user_context=message_context,
+        #     )
+        #     ace.send(msg)

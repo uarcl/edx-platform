@@ -35,45 +35,15 @@ from openedx.core.lib.edx_api_utils import get_api_data
 from openedx.core.lib.time_zone_utils import TIME_ZONE_CHOICES
 from openedx.features.enterprise_support.api import enterprise_customer_for_request
 from openedx.features.enterprise_support.utils import update_account_settings_context_for_enterprise
-
+from django.shortcuts import redirect
 log = logging.getLogger(__name__)
 
 
 @login_required
 @require_http_methods(['GET'])
 def account_settings(request):
-    """Render the current user's account settings page.
-
-    Args:
-        request (HttpRequest)
-
-    Returns:
-        HttpResponse: 200 if the page was sent successfully
-        HttpResponse: 302 if not logged in (redirect to login page)
-        HttpResponse: 405 if using an unsupported HTTP method
-
-    Example usage:
-
-        GET /account/settings
-
-    """
-    if should_redirect_to_account_microfrontend():
-        url = settings.ACCOUNT_MICROFRONTEND_URL
-
-        duplicate_provider = pipeline.get_duplicate_provider(messages.get_messages(request))
-        if duplicate_provider:
-            url = '{url}?{params}'.format(
-                url=url,
-                params=urllib.parse.urlencode({
-                    'duplicate_provider': duplicate_provider,
-                }),
-            )
-
-        return redirect(url)
-
-    context = account_settings_context(request)
-    return render_to_response('student_account/account_settings.html', context)
-
+    user = request.user
+    return redirect('/u/' + user.username)
 
 def account_settings_context(request):
     """ Context for the account settings page.

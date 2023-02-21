@@ -492,6 +492,10 @@ def render_preview_certificate(request, course_id):
     """
     return render_html_view(request, str(course_id))
 
+def render_not_found_cert(request,certificate_uuid):
+    platform_name = configuration_helpers.get_value("platform_name", settings.PLATFORM_NAME)
+    configuration = CertificateHtmlViewConfiguration.get_config()
+    return _render_invalid_certificate(request, '', platform_name, configuration)
 
 def render_cert_by_uuid(request, certificate_uuid):
     """
@@ -504,7 +508,9 @@ def render_cert_by_uuid(request, certificate_uuid):
         )
         return render_html_view(request, str(certificate.course_id), certificate)
     except GeneratedCertificate.DoesNotExist as e:
-        raise Http404 from e
+        platform_name = configuration_helpers.get_value("platform_name", settings.PLATFORM_NAME)
+        configuration = CertificateHtmlViewConfiguration.get_config()
+        return _render_invalid_certificate(request, '', platform_name, configuration)
 
 
 @handle_500(

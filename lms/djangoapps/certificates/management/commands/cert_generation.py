@@ -85,6 +85,13 @@ class Command(BaseCommand):
 
         # Loop over each user, and ask that a cert be generated for them
         users_str = options['user']
+
+        if users_str and len(users_str) > 0 and users_str[0] == 'all':
+            enrolled_students = User.objects.filter(
+                courseenrollment__course_id=course_key
+            ).values_list('id',flat=True)
+            users_str = enrolled_students if len(enrolled_students) > 0 else []
+    
         for user_id in users_str:
             user = None
             try:
@@ -102,6 +109,6 @@ class Command(BaseCommand):
                 except CertificateGenerationNotAllowed as e:
                     log.exception(
                         "Certificate generation not allowed for user %s in course %s",
-                        user.id,
+                        user_id,
                         course_key,
                     )

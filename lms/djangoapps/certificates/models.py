@@ -236,6 +236,7 @@ class GeneratedCertificate(models.Model):
     modified_date = models.DateTimeField(auto_now=True)
     error_reason = models.CharField(max_length=512, blank=True, default='')
 
+    document_number = models.CharField(max_length=30,blank=True, default='')
     # This is necessary because CMS does not install the certificates app, but it
     # imports this model's code. Simple History will attempt to connect to the installed
     # model in the certificates app, which will fail.
