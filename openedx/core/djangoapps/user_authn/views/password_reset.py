@@ -123,7 +123,7 @@ def send_password_reset_success_email(user, request):
         user (User): Django User object
         request (HttpRequest): Django request object
     """
-    log.info(def send_password_reset_success_email(user, request):")
+    log.info("def send_password_reset_success_email(user, request):")
 
 
 def send_password_reset_email_for_user(user, request, preferred_email=None):
