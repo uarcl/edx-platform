@@ -447,6 +447,10 @@ class StaticCourseTabView(EdxFragmentView):
         if tab is None:
             raise Http404
 
+
+        if request.user.is_anonymous and not check_public_access(course, [COURSE_VISIBILITY_PUBLIC]):
+            return redirect("/login?next=%s"%(quote_plus(request.path)))
+
         # Show warnings if the user has limited access
         CourseTabView.register_user_access_warning_messages(request, course)
 
@@ -490,6 +494,9 @@ class CourseTabView(EdxFragmentView):
                 course_tabs = course.tabs + _get_dynamic_tabs(course, request.user)
                 tab = CourseTabList.get_tab_by_type(course_tabs, tab_type)
                 page_context = self.create_page_context(request, course=course, tab=tab, **kwargs)
+
+                if request.user.is_anonymous and not check_public_access(course, [COURSE_VISIBILITY_PUBLIC]):
+                    return redirect("/login?next=%s"%(quote_plus(request.path)))
 
                 # Show warnings if the user has limited access
                 # Must come after masquerading on creation of page context
