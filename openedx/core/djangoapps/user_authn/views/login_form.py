@@ -193,12 +193,15 @@ def login_and_registration_form(request, initial_mode="login"):
     #   tpa_hint_provider is not available
     # AND
     #   user is not coming from a SAML IDP.
+    third_party_auth_context_val = third_party_auth_context(request, redirect_to, third_party_auth_hint)
     saml_provider = False
     running_pipeline = pipeline.get(request)
     if running_pipeline:
         saml_provider, __ = third_party_auth.utils.is_saml_provider(
             running_pipeline.get('backend'), running_pipeline.get('kwargs')
         )
+    elif len(third_party_auth_context_val['providers']) == 1 and 'loginUrl' in third_party_auth_context_val['providers'][0]:
+        return redirect(third_party_auth_context_val['providers'][0]['loginUrl'])
 
     enterprise_customer = enterprise_customer_for_request(request)
 
@@ -233,16 +236,14 @@ def login_and_registration_form(request, initial_mode="login"):
             'message': message.message, 'tags': message.tags
         } for message in messages.get_messages(request) if 'account-recovery' in message.tags
     ]
-    # auto_redirect = third_party_auth_context(request, redirect_to, third_party_auth_hint)
-    # if len(auto_redirect['providers']) == 1 and 'loginUrl' in auto_redirect['providers'][0]:
-    #     return redirect(auto_redirect['providers'][0]['loginUrl'])
+    
 
     # Otherwise, render the combined login/registration page
     context = {
         'data': {
             'login_redirect_url': redirect_to,
             'initial_mode': initial_mode,
-            'third_party_auth': third_party_auth_context(request, redirect_to, third_party_auth_hint),
+            'third_party_auth': third_party_auth_context_val,
             'third_party_auth_hint': third_party_auth_hint or '',
             'platform_name': configuration_helpers.get_value('PLATFORM_NAME', settings.PLATFORM_NAME),
             'support_link': configuration_helpers.get_value('SUPPORT_SITE_LINK', settings.SUPPORT_SITE_LINK),
@@ -273,6 +274,7 @@ def login_and_registration_form(request, initial_mode="login"):
         'allow_iframing': True,
         'disable_courseware_js': True,
         'combined_login_and_register': True,
+        'disable_login_register_buttons': True,
         'disable_footer': not configuration_helpers.get_value(
             'ENABLE_COMBINED_LOGIN_REGISTRATION_FOOTER',
             settings.FEATURES['ENABLE_COMBINED_LOGIN_REGISTRATION_FOOTER']
