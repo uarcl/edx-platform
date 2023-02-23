@@ -841,6 +841,7 @@ def student_dashboard(request):  # lint-amnesty, pylint: disable=too-many-statem
         'country_code': country_code,
         # TODO: clean when experiment(Merchandise 2U LOBs - Dashboard) would be stop. [VAN-1097]
         'is_enterprise_user': is_enterprise_learner(user),
+        'is_dashboard_page':True,
     }
 
     # Include enterprise learner portal metadata and messaging
