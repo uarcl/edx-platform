@@ -3256,8 +3256,6 @@ INSTALLED_APPS = [
 
     # MFE API
     'lms.djangoapps.mfe_config_api',
-    #UAR
-    'lms.djangoapps.certificate_uar',
 ]
 
 ######################### CSRF #########################################
